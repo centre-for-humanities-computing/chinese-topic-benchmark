@@ -13,9 +13,7 @@ def safe_index(elements: list, elem) -> Optional[int]:
 
 
 records = []
-with Path(
-    "results/paraphrase-multilingual-MiniLM-L12-v2.jsonl"
-).open() as in_file:
+with Path("results/paraphrase-multilingual-MiniLM-L12-v2.jsonl").open() as in_file:
     for line in in_file:
         line = line.strip()
         if line:
@@ -27,7 +25,12 @@ with Path(
 data = pd.DataFrame.from_records(records)
 
 METRICS = ["zh_c_npmi", "diversity", "zh_wec_in", "zh_wec_ex"]
-FORMATTED_METRICS = ["$C_{\\text{NPMI}}$", "$d$", "$C_{\\text{in}}$", "$C_{\\text{ex}}$"]
+FORMATTED_METRICS = [
+    "$C_{\\text{NPMI}}$",
+    "$d$",
+    "$C_{\\text{in}}$",
+    "$C_{\\text{ex}}$",
+]
 MODELS = [
     "KeyNMF",
     "S³",
@@ -43,37 +46,41 @@ DATASETS = [
     "ihuawen",
     "oushinet",
     "xinozhou",
-    "yidali-huarinje",
+    "yidali-huarenjie",
 ]
 summary = data.groupby(["dataset", "model"])[METRICS].mean().reset_index()
 lines = []
 n_datasets = len(DATASETS)
-top_table_layout = "c"*(n_datasets + 1)
-lines.extend([
-    f"\\begin{{tabular}}{{{top_table_layout}}}",
-    "\\toprule",
-    "&" + " & ".join([f"\\textbf{{{dataset}}}" for dataset in DATASETS]) + "\\\\",
-    "\n",
-])
-lines.extend([
-    "\\begin{tabular}{l}",
-    "\\textbf{Model} \\\\",
-    *[f"\\textbf{{{model}}} \\\\" for model in MODELS],
-    "\\end{tabular} &"
-])
+top_table_layout = "c" * (n_datasets + 1)
+lines.extend(
+    [
+        f"\\begin{{tabular}}{{{top_table_layout}}}",
+        "\\toprule",
+        "&" + " & ".join([f"\\textbf{{{dataset}}}" for dataset in DATASETS]) + "\\\\",
+        "\n",
+    ]
+)
+lines.extend(
+    [
+        "\\begin{tabular}{l}",
+        "\\textbf{Model} \\\\",
+        *[f"\\textbf{{{model}}} \\\\" for model in MODELS],
+        "\\end{tabular} &",
+    ]
+)
 for dataset in DATASETS:
-    res = data[data["dataset"] == "dataset"]
+    res = summary[summary["dataset"] == dataset]
     subtable_layout = "c" * len(METRICS)
-    lines.extend([
-        f"\\begin{{tabular}}{{{subtable_layout}}}",
-        " & ".join(FORMATTED_METRICS) + "\\\\",
-        "\\midrule",
-    ])
+    lines.extend(
+        [
+            f"\\begin{{tabular}}{{{subtable_layout}}}",
+            " & ".join(FORMATTED_METRICS) + "\\\\",
+            "\\midrule",
+        ]
+    )
     res = res[res["model"].isin(MODELS)]
     res = res.set_index("model")
-    best_models = {
-        metric: list(res[metric].nlargest(2).index) for metric in METRICS
-    }
+    best_models = {metric: list(res[metric].nlargest(2).index) for metric in METRICS}
     for model in MODELS:
         if model not in res.index:
             continue
@@ -88,12 +95,13 @@ for dataset in DATASETS:
             if model_rank == 1:
                 metric_formatted = f"\\underline{{{metric_formatted}}}"
             formatted_metrics.append(metric_formatted)
-        formatted_model = model
-        lines.append(
-            f"{formatted_model} &" + " & ".join(formatted_metrics) + "\\\\"
-        )
-    lines.extend([
-        "\\end{tabular} &",
-        "\n",
-    ])
+        lines.append(" & ".join(formatted_metrics) + "\\\\")
+    lines.extend(
+        [
+            "\\end{tabular} &",
+            "\n",
+        ]
+    )
+lines.append("\\end{tabular}")
+lines.append("\n")
 print("\n".join(lines))
