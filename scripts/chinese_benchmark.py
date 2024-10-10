@@ -7,26 +7,25 @@ from typing import Optional
 import jieba
 import numpy as np
 import pandas as pd
+from gensim.corpora import Dictionary
+from gensim.models import Word2Vec
+from gensim.models.coherencemodel import CoherenceModel
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import paired_cosine_distances
 from topic_benchmark.base import Metric
 from topic_benchmark.benchmark import run_benchmark
 from topic_benchmark.cli import load_cache
+from topic_benchmark.metrics.wec import word_embedding_coherence
 from topic_benchmark.registries import dataset_registry, metric_registry
 from topic_benchmark.utils import get_top_k
-from topic_benchmark.metrics.wec import word_embedding_coherence
-
-from gensim.models import Word2Vec
-from gensim.corpora import Dictionary
-from gensim.models.coherencemodel import CoherenceModel
-from sklearn.feature_extraction.text import CountVectorizer
-
 from turftopic.data import TopicData
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 encoder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+
+
 def tokenize_zh(text):
     return jieba.lcut(text)
 
@@ -35,7 +34,6 @@ with open("dat/chinese_stopwords.txt") as file:
     stopwords = file.readlines()
 stopwords = [s.strip() for s in stopwords]
 vectorizer = CountVectorizer(stop_words=stopwords, tokenizer=tokenize_zh)
-
 
 
 def external_coherence(topics, embedding_model: SentenceTransformer):
@@ -64,6 +62,7 @@ def load_embedding_coherence_ex() -> Metric:
 
     return score
 
+
 @metric_registry.register("zh_c_npmi")
 def load_npmi() -> Metric:
     top_k = 10
@@ -84,6 +83,7 @@ def load_npmi() -> Metric:
         return cm.get_coherence()
 
     return score
+
 
 @metric_registry.register("zh_wec_in")
 def load_iwec() -> Metric:
@@ -107,14 +107,38 @@ def load_iwec() -> Metric:
 
     return score
 
+
+@dataset_registry.register("chinanews")
+def load_chinanews():
+    corpus = pd.read_csv("dat/chinanews_all.csv")["text"].dropna()
+    return list(corpus)
+
+
+@dataset_registry.register("ihuawen")
+def load_ihuawen():
+    corpus = pd.read_csv("dat/ihuawen_all.csv")["text"].dropna()
+    return list(corpus)
+
+
+@dataset_registry.register("oushinet")
+def load_oushinet():
+    corpus = pd.read_csv("dat/oushinet_all.csv")["text"].dropna()
+    return list(corpus)
+
+
+@dataset_registry.register("xinozhou")
+def load_xinozhou():
+    corpus = pd.read_csv("dat/xinozhou_all.csv")["text"].dropna()
+    return list(corpus)
+
+
+@dataset_registry.register("yidali-huarenjie")
+def load_yidali_huarenjie():
+    corpus = pd.read_csv("dat/yidali-huarenjie_all.csv")["text"].dropna()
+    return list(corpus)
+
+
 CORPORA = ["chinanews", "ihuawen", "oushinet", "xinozhou", "yidali-huarenjie"]
-for corpus_name in CORPORA:
-
-    def load_corpus():
-        data = pd.read_csv(Path("dat").joinpath(f"{corpus_name}_all.csv"))
-        return list(data["text"].dropna())
-
-    dataset_registry.register(corpus_name)(load_corpus)
 
 
 def main():
@@ -143,12 +167,13 @@ def main():
         ],
         datasets=CORPORA,
         metrics=["diversity", "zh_c_npmi", "zh_wec_in", "zh_wec_ex"],
-        seeds=(42, ),
+        seeds=(42,),
         prev_entries=cached_entries,
     )
     for entry in entries:
         with open(out_path, "a") as out_file:
             out_file.write(json.dumps(entry) + "\n")
+
 
 if __name__ == "__main__":
     main()
