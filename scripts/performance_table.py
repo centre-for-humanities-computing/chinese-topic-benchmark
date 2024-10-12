@@ -24,9 +24,8 @@ with Path("results/paraphrase-multilingual-MiniLM-L12-v2.jsonl").open() as in_fi
 
 data = pd.DataFrame.from_records(records)
 
-METRICS = ["zh_c_npmi", "diversity", "zh_wec_in", "zh_wec_ex"]
+METRICS = ["diversity", "zh_wec_in", "zh_wec_ex"]
 FORMATTED_METRICS = [
-    "$C_{\\text{NPMI}}$",
     "$d$",
     "$C_{\\text{in}}$",
     "$C_{\\text{ex}}$",
@@ -64,6 +63,7 @@ lines.extend(
     [
         "\\begin{tabular}{l}",
         "\\textbf{Model} \\\\",
+        "\\midrule",
         *[f"\\textbf{{{model}}} \\\\" for model in MODELS],
         "\\end{tabular} &",
     ]
